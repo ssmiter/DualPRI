@@ -295,10 +295,6 @@ For questions and feedback, please contact: chenrui3074@stu.ouc.edu.cn
 - NAMD: https://www.ks.uiuc.edu/Research/namd/
 - FoldX: http://foldxsuite.crg.eu/
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ---
 
 **Note**: This work represents a novel approach to incorporating structural information into state space models while maintaining computational efficiency. The key innovation—extracting block-level states for structural prediction—opens new possibilities for interpretable deep learning in structural biology.
