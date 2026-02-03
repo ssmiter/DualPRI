@@ -294,7 +294,3 @@ For questions and feedback, please contact: chenrui3074@stu.ouc.edu.cn
 - Mamba: https://github.com/state-spaces/mamba
 - NAMD: https://www.ks.uiuc.edu/Research/namd/
 - FoldX: http://foldxsuite.crg.eu/
-
----
-
-**Note**: This work represents a novel approach to incorporating structural information into state space models while maintaining computational efficiency. The key innovation—extracting block-level states for structural prediction—opens new possibilities for interpretable deep learning in structural biology.
