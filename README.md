@@ -112,22 +112,7 @@ python dataset_process/pssm.py
 python dataset_process/conservation.py
 ```
 
-#### 2. Structure Features (Enhanced)
-
-```bash
-# Extract multi-scale structural features
-python dataset_process/enhanced_rna_processing_debug.py
-```
-
-Extracted features include:
-
-- Secondary structure elements
-- Solvent accessible surface area
-- Residue depth
-- Backbone dihedral angles
-- Multi-scale contact information (6Å, 8Å, 10Å)
-
-#### 3. Chain Separation (for Protein-RNA Complexes)
+#### 2. Chain Separation (for Protein-RNA Complexes)
 
 ```bash
 # Separate protein and RNA chains
@@ -156,7 +141,7 @@ Key parameters in `config.py`:
 
 - `DEFAULT_CHUNK_SIZE`: 64 (chunk size for state computation)
 - `USE_BIDIRECTIONAL`: True (bidirectional Mamba processing)
-- `DISTANCE_THRESHOLDS`: [6, 8, 10] (multi-scale distance prediction)
+- `DISTANCE_THRESHOLDS`: [6, 8, 10, ...] (multi-scale distance prediction)
 
 ### DualSSD Model
 
