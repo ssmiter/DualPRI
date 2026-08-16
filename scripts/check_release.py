@@ -21,6 +21,7 @@ REQUIRED_FILES = [
     "requirements.txt",
     "configs/paper_config.yaml",
     "docs/DATA.md",
+    "docs/ENVIRONMENT.md",
     "docs/REPRODUCIBILITY.md",
 ]
 TEXT_SUFFIXES = {".py", ".md", ".txt", ".yaml", ".yml", ".cff", ".json"}

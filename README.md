@@ -38,13 +38,14 @@ Large datasets, checkpoints, molecular-dynamics trajectories, and figure source 
 ├── dataset_process/              # Dataset preprocessing utilities
 ├── dataset/                      # Small benchmark metadata tables
 ├── docs/DATA.md                  # Data access and provenance
+├── docs/ENVIRONMENT.md           # Runtime, compiler, and optional dependencies
 ├── docs/REPRODUCIBILITY.md       # Manuscript reproduction guide
 └── scripts/check_release.py      # Dependency-free release sanity check
 ```
 
 ## Environment
 
-The reference environment uses Linux, Python 3.10, PyTorch 2.0, and CUDA 11.7. GPU execution requires a compatible NVIDIA driver.
+The reference environment uses Linux, Python 3.10, and PyTorch 2.0.0 with its CUDA 11.7 runtime. The build host also provided CUDA 11.8 NVCC for custom extensions. This mixed runtime/compiler setup reflects the manuscript environment and is documented explicitly in [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
 
 ### Conda installation
 
@@ -52,6 +53,8 @@ The reference environment uses Linux, Python 3.10, PyTorch 2.0, and CUDA 11.7. G
 conda env create -f environment.yml
 conda activate iscale
 ```
+
+The Conda specification installs the core iSCALE path. It intentionally records both `pytorch-cuda=11.7` and `cuda-nvcc=11.8.89`; they describe the PyTorch runtime and extension compiler respectively.
 
 ### Manual installation
 
@@ -66,7 +69,9 @@ pip install -r requirements.txt
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
 
-The custom state space kernels require Triton and are intended for Linux GPU environments. Do not use the machine-specific wheel paths that appeared in early repository revisions.
+The custom state space kernels require Triton and are intended for Linux GPU environments. The core iSCALE path uses the vendored kernels and does not require a separate `mamba-ssm` installation. To recreate historical Mamba fast paths, install `causal-conv1d==1.4.0` and `mamba-ssm==2.2.2` after PyTorch with `--no-build-isolation`; see [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
+
+Optional sequence-feature generation, structural analysis, and molecular-dynamics workflows require additional packages described in the same environment note. They are not needed when training from the released processed dataset.
 
 ## Data preparation
 
