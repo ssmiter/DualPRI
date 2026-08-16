@@ -1,296 +1,166 @@
-<h1 align="center">
-  <img src="./Framework.png" width=768/>
-</h1>
+# iSCALE
 
+**Spatial Coupling-Aware State Space Modeling for Mutation-Induced Binding Affinity Prediction**
 
-# DualSSD:  A Dual-Stream State Space Model for Protein-RNA Interaction Prediction
+iSCALE is a research implementation for predicting mutation-induced changes in protein–RNA binding affinity. It combines protein sequence descriptors, implicit multiscale information about the binding partner, and a bidirectional state space model. A structure-aware auxiliary task is used during training to shape the learned representation.
 
-A novel architecture that leverages Mamba2 block-level states for efficient structural prediction in protein-RNA complexes. By extracting and utilizing intermediate states from State Space Models, DualSSD achieves both improved prediction accuracy and enhanced interpretability through attention visualization.
+This repository is being prepared as the code release accompanying the manuscript:
 
-## Key Innovation
+> *Predicting Protein–RNA Binding Affinity Changes via Spatial Coupling-Aware State Space Modeling*
 
-**Block-Level State Extraction**: Unlike traditional sequence-only models, DualSSD modifies the Mamba2 source code to return intermediate block-level states, enabling efficient structural information prediction while maintaining linear complexity.
+The repository was originally named DualPRI and early internal code used the name DualSSD. The public model name is **iSCALE**. The Python alias `DualSSD` and the command-line value `dualssd` are retained only for backward compatibility.
 
-**Dual-Stream Architecture**:
+![iSCALE framework](Framework.png)
 
-- **Sequence Stream**: Mamba2 processes protein sequences with linear complexity
-- **Structure Stream**: Block-level states are mapped to distance encodings via MLP layers
+## Release scope
 
-## Architecture Highlights
+This code release contains:
 
-### 1. Source Code Modification for State Extraction
+- the iSCALE model and training code;
+- the modified state space operations required to expose chunk-level states;
+- protein–RNA dataset preprocessing utilities;
+- training and cross-validation entry points;
+- the configuration used for the manuscript release.
 
-The core innovation involves minimal invasive modifications to Mamba2's state computation logic:
+Large datasets, checkpoints, molecular-dynamics trajectories, and figure source data are distributed separately through a research-data repository. See [docs/DATA.md](docs/DATA.md).
 
-```python
-# Modified import from custom Mamba implementation
-from mamba.mamba_ssm.ops.triton.ssd_combined_with_state import mamba_chunk_scan_combined
+## Repository layout
+
+```text
+.
+├── config.py                     # Shared paths and manuscript model configuration
+├── configs/paper_config.yaml     # Human-readable manuscript configuration
+├── main.py                       # Training and evaluation entry point
+├── cross_val.py                  # Cross-validation entry point
+├── trainer.py                    # Training utilities
+├── model/iscale.py               # iSCALE model implementation
+├── mamba/                        # Modified state space implementation
+├── dataset_process/              # Dataset preprocessing utilities
+├── dataset/                      # Small benchmark metadata tables
+├── docs/DATA.md                  # Data access and provenance
+├── docs/REPRODUCIBILITY.md       # Manuscript reproduction guide
+└── scripts/check_release.py      # Dependency-free release sanity check
 ```
 
-Key modifications:
+## Environment
 
-- Located state computation functions in Mamba source code
-- Implemented block-level state return with minimal code changes
-- Maintained compatibility with original Mamba architecture
-- Preserved linear complexity O(n) for sequence processing
+The reference environment uses Linux, Python 3.10, PyTorch 2.0, and CUDA 11.7. GPU execution requires a compatible NVIDIA driver.
 
-### 2. Structure Prediction via Distance Encoding
-
-Block-level states are processed to predict structural information:
-
-1. **State Extraction**: Obtain chunk-level hidden states from Mamba2
-2. **MLP Prediction**: Map states to distance encodings between residues
-3. **Multi-Scale Distance**: Predict distances at different granularities (6Å, 8Å, 10Å thresholds)
-4. **Joint Training**: Structural prediction loss enhances both accuracy and interpretability
-
-### 3. Interpretability Validation
-
-**Molecular Dynamics Simulation Integration**:
-
-- Performed all-atom MD simulations using NAMD (learned from scratch in 2 weeks)
-- Extracted conformational changes from 100ns trajectories
-- Compared attention patterns with structural dynamics
-
-**Attention Visualization**:
-
-- Visualized model attention on mutation-affected regions
-- Discovered attention patterns correlate with conformational changes
-- Validated that the model focuses on structurally relevant residues
-
-## Data Preparation
-
-### Dataset Structure
-
-The dataset for protein-RNA interaction prediction is organized as follows:
-
-```
-dataset_process/
-├── dataset/
-│   └── protein_rna_dataset.pkl    # Main dataset file
-├── Dataset/
-│   ├── S394.csv                   # Mutation annotations
-│   ├── S394_pdbs/                 # PDB structure files
-│   ├── PSSM_394/                  # Sequence profiles
-│   ├── cons_s394/                 # Conservation scores
-│   └── Sequence_394/              # FASTA sequences
-└── processed_pdbs/
-    ├── protein_chains/            # Separated protein chains
-    └── nucleic_chains/            # Separated RNA chains
-```
-
-### Structure Acquisition
-
-1. **Wild-type PDB files**: Download from RCSB PDB database
-
-   ```bash
-   wget https://files.rcsb.org/download/1AUD.pdb
-   ```
-
-2. **Mutant structures**: Generate using FoldX
-
-   ```bash
-   # Repair wild-type structure
-   foldx --command=RepairPDB --pdb=1AUD.pdb
-   
-   # Build mutant (e.g., A10G mutation)
-   # individual_list.txt: AA10G;
-   foldx --command=BuildModel --pdb=1AUD_Repair.pdb --mutant-file=individual_list.txt
-   ```
-
-### Feature Extraction Pipeline
-
-#### 1. Sequence Features
+### Conda installation
 
 ```bash
-# Generate PSSM profiles using PSI-BLAST
-psiblast -db swissprot -query protein.fasta -num_iterations 3 -out_ascii_pssm protein.pssm
-
-# Process PSSM files
-python dataset_process/pssm.py
-
-# Calculate conservation scores
-python dataset_process/conservation.py
+conda env create -f environment.yml
+conda activate iscale
 ```
 
-#### 2. Chain Separation (for Protein-RNA Complexes)
+### Manual installation
+
+Install the PyTorch build appropriate for your CUDA runtime first. For the reference CUDA 11.7 environment:
 
 ```bash
-# Separate protein and RNA chains
-python dataset_process/separate.py
+conda create -n iscale python=3.10 -y
+conda activate iscale
+conda install pytorch==2.0.0 torchvision==0.15.0 torchaudio==2.0.0 pytorch-cuda=11.7 \
+  -c pytorch -c nvidia
+pip install -r requirements.txt
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
 
-## Model Architecture
+The custom state space kernels require Triton and are intended for Linux GPU environments. Do not use the machine-specific wheel paths that appeared in early repository revisions.
 
-### Mamba2 with Block-Level State Extraction
+## Data preparation
 
-The modified Mamba2 architecture:
+The training entry points expect a processed pickle file containing paired wild-type and mutant protein graphs, the binding-partner graph, mutation metadata, and target affinity changes.
 
-```python
-# Custom Mamba module with state extraction
-mamba/
-├── mamba_ssm/
-│   ├── modules/
-│   │   └── mamba2_simple.py          # Modified Mamba2 module
-│   └── ops/
-│       └── triton/
-│           ├── ssd_combined.py        # Original implementation
-│           └── ssd_combined_with_state.py  # Modified for state extraction
+By default, the code looks for:
+
+```text
+data/processed/protein_rna_dataset.pkl
 ```
 
-Key parameters in `config.py`:
-
-- `DEFAULT_CHUNK_SIZE`: 64 (chunk size for state computation)
-- `USE_BIDIRECTIONAL`: True (bidirectional Mamba processing)
-- `DISTANCE_THRESHOLDS`: [6, 8, 10, ...] (multi-scale distance prediction)
-
-### DualSSD Model
-
-```python
-from model.DualSSD import DualSSD
-
-model = DualSSD(
-    protein_channels=41,      # Protein feature dimension
-    rna_channels=5,           # RNA feature dimension
-    hidden_channels=64,       # Hidden layer dimension
-    num_layers=3,             # Number of Mamba layers
-    chunk_size=64,            # SSD chunk size
-    dropout=0.1
-)
-```
-
-## Training
-
-### Basic Training
+You can instead provide an explicit path:
 
 ```bash
-# Train DualSSD model
+python main.py --data_path /path/to/protein_rna_dataset.pkl
+```
+
+The public dataset DOI and checksums will be added to [docs/DATA.md](docs/DATA.md) before the versioned release. Raw third-party structural and benchmark data are not duplicated in the code repository.
+
+## Manuscript configuration
+
+The release candidate uses the following central configuration:
+
+| Parameter | Value |
+|---|---:|
+| Hidden dimension | 64 |
+| SSD layers | 3 |
+| State dimension | 32 |
+| Convolution kernel size | 4 |
+| Head dimension | 16 |
+| Chunk size | 32 |
+| Auxiliary loss weight | 0.2 |
+| Dropout | 0.1 |
+
+The machine-readable values are defined in `config.PAPER_MODEL_CONFIG` and documented in [configs/paper_config.yaml](configs/paper_config.yaml). These values must remain synchronized with the released checkpoint.
+
+## Quick checks
+
+Run the dependency-free repository check:
+
+```bash
+python scripts/check_release.py
+```
+
+After downloading the processed dataset, start a training run with the manuscript model name:
+
+```bash
 python main.py \
-    --model dualssd \
-    --data_path ./dataset_process/dataset/protein_rna_dataset.pkl \
-    --batch_size 16 \
-    --learning_rate 0.0008 \
-    --epochs 300 \
-    --chunk_size 64 \
-    --feature_type 3  # 0=base, 1=distribution, 2=intensity, 3=full features
+  --model iscale \
+  --data_path data/processed/protein_rna_dataset.pkl \
+  --feature_type 1 \
+  --batch_size 16 \
+  --learning_rate 0.0008 \
+  --epochs 300 \
+  --chunk_size 32 \
+  --patience 40 \
+  --output_dir output
 ```
 
-### Advanced Options
+The feature options accepted by the current data loader are:
+
+- `0`: sequence and evolutionary descriptors only;
+- `1`: add multiscale spatial distribution features;
+- `2`: add the nearest-partner coupling intensity;
+- `3`: add both spatial feature types.
+
+For five-fold evaluation, use:
 
 ```bash
-# Training with full features and attention visualization
-python main.py \
-    --model dualssd \
-    --feature_type 3 \
-    --chunk_size 64 \
-    --batch_size 16 \
-    --learning_rate 0.0008 \
-    --epochs 300 \
-    --patience 40 \
-    --split_strategy pdb_limited \  # 2 samples per PDB for robust evaluation
-    --cache_dir ./contact_cache \   # Cache multi-scale contact features
-    --output_dir ./output \
-    --experiment_name dualssd_full
+python cross_val.py \
+  --model iscale \
+  --data_path data/processed/protein_rna_dataset.pkl \
+  --feature_type 1 \
+  --k_folds 5 \
+  --chunk_size 32 \
+  --seed 42
 ```
 
-Key training parameters:
+See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the relationship between datasets, configurations, checkpoints, and manuscript figures.
 
-- `--feature_type`: Multi-scale feature configuration
-  - 0: Base features only
-  - 1: + Distance distribution features
-  - 2: + Contact intensity features
-  - 3: Full features (distribution + intensity)
-- `--chunk_size`: Chunk size for Mamba2 state computation
-- `--split_strategy`: Data splitting strategy (random/pdb_limited/train_ratio)
-- `--force_recompute`: Force recompute cached contact features
+## Outputs
 
-### Molecular Dynamics Simulation Validation
+Training outputs are written to timestamped directories under `output/` unless another location is supplied. These directories can contain checkpoints, logs, predictions, and cached intermediate values and are intentionally excluded from version control.
 
-To validate model interpretability with MD simulations:
+## Citation
 
-1. **Run MD simulation** (100ns, NPT ensemble)
-2. **Extract conformational changes** from trajectories
-3. **Generate attention heatmaps** from trained model
-4. **Compare patterns**: Attention vs. structural dynamics
+Citation metadata are provided in [CITATION.cff](CITATION.cff). The manuscript DOI and the archived software DOI will be added when available.
 
-Example visualization workflow:
+## License and third-party code
 
-```python
-# Extract attention weights
-attention_weights = model.get_attention_maps(data)
+The project is released under the Apache License 2.0. Portions of the state space implementation are derived from the Apache-2.0-licensed [state-spaces/mamba](https://github.com/state-spaces/mamba) project and have been modified to return intermediate states. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-# Compare with MD-derived conformational changes
-correlation = compare_attention_with_md(attention_weights, md_trajectory)
-```
-
-## Model Evaluation
-
-### Prediction Metrics
-
-The model is evaluated using:
-
-- **PCC (Pearson Correlation Coefficient)**: Measures linear correlation
-- **RMSE (Root Mean Square Error)**: Prediction accuracy
-- **MAE (Mean Absolute Error)**: Average prediction error
-
-### Results
-
-**Protein-RNA Complex Prediction**:
-
-- PCC: 0.73 (vs SOTA 0.66)
-- Demonstrates improved accuracy through structural information integration
-
-**Interpretability Validation**:
-
-- Attention patterns correlate with MD-simulated conformational changes
-- Model focuses on mutation-affected regions
-- Validates structural awareness of the model
-
-## Project Structure
-
-```
-DualSSD/
-├── main.py                          # Main training script
-├── config.py                        # Configuration file
-├── trainer.py                       # Training utilities
-├── model_factory.py                 # Model creation factory
-├── utils.py                         # Utility functions
-├── mamba/                          # Modified Mamba2 source code
-│   └── mamba_ssm/
-│       ├── modules/
-│       │   └── mamba2_simple.py
-│       └── ops/
-│           └── triton/
-│               └── ssd_combined_with_state.py  # Key modification
-├── model/
-│   ├── DualSSD.py                  # Main model architecture
-│   └── utils/
-│       └── loader/
-│           └── enhanced_contact_data_loader.py  # Data loading with contact features
-├── dataset_process/
-│   ├── processed_pdbs/             # Chains
-│   ├── pssm.py                     # PSSM processing
-│   ├── conservation.py             # Conservation score calculation
-│   ├── dataset_simplified.py       # Dataset
-│   └── separate.py                 # Chain separation
-└── dataset/
-    ├── S394.csv                    # Mutation annotations
-    └── protein_rna_dataset.pkl     # Processed dataset
-```
-
-## Key Features
-
-1. **Linear Complexity**: Maintains O(n) complexity while incorporating structural information
-2. **Minimal Source Modification**: Only essential changes to Mamba2 core functions
-3. **Multi-Scale Contacts**: Considers interactions at multiple distance thresholds
-4. **Interpretability**: Attention visualization reveals structural awareness
-5. **Validated by MD**: Confirmed through molecular dynamics simulations
+Datasets and external software retain their original terms of use and citation requirements.
 
 ## Contact
 
-For questions and feedback, please contact: chenrui3074@stu.ouc.edu.cn
-
-## Acknowledgments
-
-- Mamba: https://github.com/state-spaces/mamba
-- NAMD: https://www.ks.uiuc.edu/Research/namd/
-- FoldX: http://foldxsuite.crg.eu/
+For questions about the code or data release, contact Rui Chen at `chenrui3074@stu.ouc.edu.cn`.

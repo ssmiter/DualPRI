@@ -1,78 +1,92 @@
-# config.py
+"""Shared configuration for the iSCALE research code."""
+
+from __future__ import annotations
+
 import os
-import sys
+from pathlib import Path
 
 
-def get_config(node_features):
-    gmb_args = {
-        'd_model': 64,  # 应与 hidden_channels 匹配
-        'd_state': 16,
-        'd_conv': 2,
-        'expand': 1,
-        'use_checkpointing': True
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+# Configuration used for the manuscript release. Keep this mapping synchronized
+# with the released checkpoint and configs/paper_config.yaml.
+PAPER_MODEL_CONFIG = {
+    "hidden_channels": 64,
+    "num_layers": 3,
+    "d_state": 32,
+    "d_conv": 4,
+    "expand": 2,
+    "headdim": 16,
+    "chunk_size": 32,
+    "aux_weight": 0.2,
+}
+
+
+def get_config(node_features: int) -> dict:
+    """Return the manuscript model configuration for legacy callers."""
+    return {
+        "in_channels": node_features,
+        "hidden_channels": PAPER_MODEL_CONFIG["hidden_channels"],
+        "out_channels": 1,
+        "gmb_args": {
+            "d_model": PAPER_MODEL_CONFIG["hidden_channels"],
+            "d_state": PAPER_MODEL_CONFIG["d_state"],
+            "d_conv": PAPER_MODEL_CONFIG["d_conv"],
+            "expand": PAPER_MODEL_CONFIG["expand"],
+            "use_checkpointing": True,
+        },
+        "num_layers": PAPER_MODEL_CONFIG["num_layers"],
     }
-    model_args = {
-        'in_channels': node_features,
-        'hidden_channels': 64,
-        'out_channels': 1,
-        'gmb_args': gmb_args,
-        'num_layers': 3
-    }
-
-    return model_args
 
 
-# 全局配置: 默认
 ENCODING_DIM = 16
-BATCH_SIZE = 16        # 可以适当调整batch size，因为每个样本现在使用突变局部子图
-LEARNING_RATE = 0.001   # 可以适当调整学习率
+BATCH_SIZE = 16
+LEARNING_RATE = 8e-4
 WEIGHT_DECAY = 1e-5
-NUM_EPOCHS = 100        # 可以适当调整, 建议全图300，子图100
-NUM_LAYERS = 3
-SEED = 42  # 41, 42
+NUM_EPOCHS = 300
+NUM_LAYERS = PAPER_MODEL_CONFIG["num_layers"]
+SEED = 42
 SHUFFLE = True
 VAL_SPLIT = 0.1
 DEFAULT_CONTACT_THRESHOLDS = [8.0, 10.0, 15.0, 20.0, 30.0, 50.0]
-# DEFAULT_CONTACT_THRESHOLDS = [7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 16.0, 20.0, 30.0, 40.0, 50.0]
-DEFAULT_CHUNK_SIZE = 32  # 32
+DEFAULT_CHUNK_SIZE = PAPER_MODEL_CONFIG["chunk_size"]
 
-# 模型参数
-
-
-# 子图相关配置
-USE_SUBGRAPHS = True    # 为False时，使用原始图数据，NUM_HOPS不起作用
-NUM_HOPS = 3            # k-hop邻居数（3, 4, 5, 6）, 推荐（3, 4）
-
-# 其他
+USE_SUBGRAPHS = True
+NUM_HOPS = 3
 NUM_WORKERS = 0
 PREFETCH_FACTOR = 1
-DEFAULT_ESM2_CACHE_DIR = "./esm2_features"
+
+# Optional legacy feature caches remain configurable for older experiments, but
+# they are not part of the manuscript release package.
+DEFAULT_ESM2_CACHE_DIR = os.getenv(
+    "ISCALE_ESM2_CACHE_DIR", str(PROJECT_ROOT / "data" / "optional_feature_cache")
+)
 ESM2_FEATURE_DIM = 1280
 ESM2_FEATURE_TYPES = [4, 5, 6, 7]
 
-# 项目根目录
-DIR="/media/ST-18T/cheery/PRITrans"
-# 常用目录
-DATA_DIR = f"{DIR}/dataset_process/pkl"
-MODEL_DIR = f"{DIR}/model_zoo"
-# LOG_DIR = f"{DIR}/logs"
+DATA_DIR = Path(os.getenv("ISCALE_DATA_DIR", PROJECT_ROOT / "data" / "processed"))
+MODEL_DIR = Path(os.getenv("ISCALE_MODEL_DIR", PROJECT_ROOT / "checkpoints"))
+DEFAULT_DATASET_PATH = Path(
+    os.getenv("ISCALE_DATA_PATH", DATA_DIR / "protein_rna_dataset.pkl")
+)
 
 
-def import_from_path(file_path, module_name=None):
-    """从文件路径导入模块"""
+def import_from_path(file_path: str | os.PathLike, module_name: str | None = None):
+    """Import a Python module from an explicit path."""
     import importlib.util
 
-    # 检查文件是否存在
+    file_path = os.fspath(file_path)
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"模块文件不存在: {file_path}")
-
+        raise FileNotFoundError(f"Module file does not exist: {file_path}")
     if module_name is None:
-        module_name = os.path.basename(file_path).split('.')[0]
+        module_name = Path(file_path).stem
 
     try:
         spec = importlib.util.spec_from_file_location(module_name, file_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not create an import specification for {file_path}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
-    except Exception as e:
-        raise ImportError(f"导入模块 {file_path} 失败: {str(e)}")
+    except Exception as exc:
+        raise ImportError(f"Failed to import {module_name} from {file_path}: {exc}") from exc

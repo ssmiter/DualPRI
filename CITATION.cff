@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use iSCALE, please cite the accompanying manuscript and this software release."
+title: "iSCALE: Spatial Coupling-Aware State Space Modeling"
+type: software
+authors:
+  - family-names: Chen
+    given-names: Rui
+    email: chenrui3074@stu.ouc.edu.cn
+  - family-names: Huang
+    given-names: Xiaoyu
+  - family-names: Jiang
+    given-names: Huasen
+  - family-names: Ma
+    given-names: Wenjian
+  - family-names: Bi
+    given-names: Xiangpeng
+  - family-names: Wei
+    given-names: Zhiqiang
+  - family-names: Nie
+    given-names: Jie
+  - family-names: Zhang
+    given-names: Shugang
+repository-code: "https://github.com/ssmiter/DualPRI"
+url: "https://github.com/ssmiter/DualPRI"
+version: 1.0.0
+license: Apache-2.0
+keywords:
+  - protein-RNA interaction
+  - binding affinity
+  - mutation effect prediction
+  - state space model
+  - structural bioinformatics

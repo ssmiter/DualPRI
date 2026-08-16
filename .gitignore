@@ -1,0 +1,39 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Training outputs and caches
+output/
+outputs/
+logs/
+checkpoints/
+contact_cache/
+*.pt
+*.pth
+*.ckpt
+
+# Large processed data and optional feature caches
+data/processed/
+dataset_process/dataset/
+dataset_process/pkl/
+dataset_process/esm2_features/
+*.pkl
+*.rar
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example

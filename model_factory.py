@@ -1,366 +1,164 @@
-"""
-蛋白质-RNA相互作用模型工厂
-统一的模型创建接口，适用于所有模型
-"""
-import os
+"""Model creation and checkpoint-loading helpers for iSCALE."""
+
+from __future__ import annotations
+
 import importlib
+import json
+from pathlib import Path
+from typing import Any
+
 import torch
-import torch.nn as nn
-from config import DEFAULT_CHUNK_SIZE, DEFAULT_CONTACT_THRESHOLDS
+
+from config import DEFAULT_CHUNK_SIZE, PAPER_MODEL_CONFIG
 
 
 class ModelFactory:
-    """
-    模型工厂类，用于创建和管理不同类型的蛋白质-RNA相互作用模型
-    """
-    
-    # 内置模型映射
+    """Create supported models through a stable public interface."""
+
     BUILTIN_MODELS = {
-        'transformer': 'model_zoo.transformer.TransformerModel',
-        'dualssd': 'model.DualSSD.DualSSD',  # DualSSD主模型
-         # 新增对比模型
-        'gnn': 'model_zoo.unified_gnn.UnifiedGNN',
-        'gcn': 'model_zoo.unified_gnn.UnifiedGNN',  # 默认使用GCN
-        'gat': 'model_zoo.unified_gnn.UnifiedGNN',  # 使用GAT
-        'sage': 'model_zoo.unified_gnn.UnifiedGNN',  # 使用GraphSAGE
-        'gin': 'model_zoo.unified_gnn.UnifiedGNN',  # 使用GIN
-        'edge': 'model_zoo.unified_gnn.UnifiedGNN',  # 使用EdgeCNN
-        'graph_transformer': 'model_zoo.GraphTransformer.GraphTransformer_WithRandomWalkPE',
+        "iscale": "model.iscale.ISCALE",
+        "dualssd": "model.iscale.ISCALE",  # Backward-compatible CLI alias.
     }
 
-    # 模型参数映射：定义每个模型期望的参数格式
     MODEL_PARAMS_MAP = {
-        # 新添加的映射
-        # 在MODEL_PARAMS_MAP中添加,
-        'model_zoo.transformer.TransformerModel': {
-            'protein_channels': 'protein_channels',
-            'rna_channels': 'rna_channels',  # 为接口兼容性保留
-            'hidden_channels': 'hidden_channels',
-            'out_channels': 'out_channels',
-            'num_layers': 'num_layers',
-            'nhead': 8,  # 默认头数
-            'dropout': 'dropout',
-            'dim_feedforward': 'hidden_channels * 4'  # 前馈网络维度为隐藏层的4倍
-        },
-        'model_zoo.unified_gnn.UnifiedGNN': {
-            'protein_channels': 'protein_channels',
-            'rna_channels': 'rna_channels',
-            'hidden_channels': 'hidden_channels',
-            'out_channels': 'out_channels',
-            'num_layers': 'num_layers',
-            'dropout': 'dropout',
-            'pool_type': 'mean',  # 默认使用平均池化
-            'norm': None,  # 默认不使用归一化
-            'heads': 4,  # GAT默认头数
-            'edge_dim': 16  # 边特征默认维度
-            # 注意：gnn_type会在_map_params方法中通过特殊逻辑设置
-        },
-        'model_zoo.GraphTransformer.GraphTransformer_WithRandomWalkPE': {
-            'protein_channels': 'protein_channels',
-            'rna_channels': 'rna_channels',  # 为接口兼容性保留，但实际不使用
-            'hidden_channels': 'hidden_channels',
-            'out_channels': 'out_channels',
-            'num_layers': 'num_layers',
-            'dropout': 'dropout',
-            'walk_length': 16,  # 默认随机游走步长
-            'edge_dim': 16,  # 边特征维度，与positional_encoding函数输出一致
-            'use_performer': True
-        },
-        'model.DualSSD.DualSSD': {
-            'protein_channels': 'protein_channels',
-            'rna_channels': 'rna_channels',
-            'hidden_channels': 'hidden_channels',
-            'out_channels': 1,
-            'num_layers': 3,
-            'dropout': 'dropout',
-            'd_state': 32,
-            'd_conv': 4,
-            'expand': 2,
-            'headdim': 16,
-            'chunk_size': DEFAULT_CHUNK_SIZE,
-            # 'num_contact_classes': num_contact_classes,
-            'aux_weight': 0.2  # 使用与之前相同的辅助任务权重
-        },  # it works well with Parameters(32 4 2 16 32 7 0.2)
+        "model.iscale.ISCALE": {
+            "protein_channels": "protein_channels",
+            "rna_channels": "rna_channels",
+            "hidden_channels": "hidden_channels",
+            "out_channels": 1,
+            "num_layers": PAPER_MODEL_CONFIG["num_layers"],
+            "dropout": "dropout",
+            "d_state": PAPER_MODEL_CONFIG["d_state"],
+            "d_conv": PAPER_MODEL_CONFIG["d_conv"],
+            "expand": PAPER_MODEL_CONFIG["expand"],
+            "headdim": PAPER_MODEL_CONFIG["headdim"],
+            "chunk_size": DEFAULT_CHUNK_SIZE,
+            "aux_weight": PAPER_MODEL_CONFIG["aux_weight"],
+        }
     }
 
     @classmethod
-    def create_model(cls, model_name, **kwargs):
-        """
-        创建模型实例
-
-        参数:
-        - model_name: 模型名称（预设名称或完整类路径）
-        - **kwargs: 传递给模型构造函数的参数
-
-        返回:
-        - model: 模型实例
-        """
+    def create_model(cls, model_name: str, **kwargs: Any):
+        """Create a model from a built-in name or a fully qualified class path."""
         try:
-            # 首先检查是否是预设模型
             if model_name in cls.BUILTIN_MODELS:
-                model_path = cls.BUILTIN_MODELS[model_name]
-                return cls._create_from_path(model_path, **kwargs)
-
-            # 检查model_name是否是直接的类路径
-            if '.' in model_name:
+                return cls._create_from_path(cls.BUILTIN_MODELS[model_name], **kwargs)
+            if "." in model_name:
                 return cls._create_from_path(model_name, **kwargs)
-
-            # 尝试从model目录加载
-            if os.path.exists(f"model/{model_name}.py"):
-                return cls._create_from_path(f"model.{model_name}", **kwargs)
-
-            # 尝试从model_zoo目录加载
-            if os.path.exists(f"model_zoo/{model_name}.py"):
-                return cls._create_from_path(f"model_zoo.{model_name}", **kwargs)
-
-            # 找不到模型
-            raise ValueError(f"未找到模型: {model_name}")
-
-        except Exception as e:
-            raise ValueError(f"创建模型 '{model_name}' 失败: {str(e)}")
+            raise ValueError(f"Unknown model: {model_name}")
+        except Exception as exc:
+            raise ValueError(f"Could not create model '{model_name}': {exc}") from exc
 
     @classmethod
-    def _create_from_path(cls, model_path, **kwargs):
-        """
-        从模块路径创建模型
-
-        参数:
-        - model_path: 模型类的完整路径 (例如 'model.my_model.MyModel')
-        - **kwargs: 传递给模型构造函数的参数
-
-        返回:
-        - model: 模型实例
-        """
+    def _create_from_path(cls, model_path: str, **kwargs: Any):
+        """Instantiate a model from ``package.module.ClassName``."""
         try:
-            # 解析模块路径和类名
-            module_path, class_name = model_path.rsplit('.', 1)
-
-            # 导入模块
-            module = importlib.import_module(module_path)
-
-            # 获取类
-            model_class = getattr(module, class_name)
-
-            # 添加模型名称，用于统一GNN模型设置gnn_type
-            if 'model' in kwargs and model_path == 'model.unified_gnn.UnifiedGNN':
-                kwargs['model_name'] = kwargs['model']
-
-            # 检查是否有create_model静态方法
-            if hasattr(model_class, 'create_model'):
+            module_path, class_name = model_path.rsplit(".", 1)
+            model_class = getattr(importlib.import_module(module_path), class_name)
+            if hasattr(model_class, "create_model"):
                 return model_class.create_model(**kwargs)
-
-            # 获取正确的参数映射
-            model_params = cls._map_params(model_path, **kwargs)
-
-            # 实例化模型
-            return model_class(**model_params)
-
-        except (ImportError, AttributeError) as e:
-            raise ValueError(f"无法导入模型 '{model_path}': {str(e)}")
-        except Exception as e:
-            raise ValueError(f"创建模型实例失败: {str(e)}")
-
+            return model_class(**cls._map_params(model_path, **kwargs))
+        except (ImportError, AttributeError) as exc:
+            raise ValueError(f"Could not import model '{model_path}': {exc}") from exc
+        except Exception as exc:
+            raise ValueError(f"Could not instantiate model '{model_path}': {exc}") from exc
 
     @classmethod
-    def _map_params(cls, model_path, **kwargs):
-        """
-        根据模型类型映射参数
+    def _map_params(cls, model_path: str, **kwargs: Any) -> dict[str, Any]:
+        """Map public training arguments to a model constructor."""
+        param_map = cls.MODEL_PARAMS_MAP.get(model_path)
+        if param_map is None:
+            return dict(kwargs)
 
-        参数:
-        - model_path: 模型类的完整路径
-        - **kwargs: 原始参数
-
-        返回:
-        - 映射后的参数字典
-        """
-        # 如果模型有特定的参数映射配置，使用它
-        if model_path in cls.MODEL_PARAMS_MAP:
-            param_map = cls.MODEL_PARAMS_MAP[model_path]
-            model_params = {}
-
-            # 处理每个参数映射
-            for target_param, source_param in param_map.items():
-                if isinstance(source_param, dict):
-                    # 处理嵌套参数如gmb_args
-                    nested_params = {}
-                    for nested_target, nested_source in source_param.items():
-                        if isinstance(nested_source, str):
-                            if nested_source in kwargs:
-                                nested_params[nested_target] = kwargs[nested_source]
-                                print(f"嵌套参数映射: {nested_target} = {kwargs[nested_source]} (来自 {nested_source})")
-                            else:
-                                print(f"警告: 嵌套参数 {nested_target} 的映射源 {nested_source} 不在用户参数中")
-                        else:
-                            nested_params[nested_target] = nested_source
-                            print(f"嵌套参数使用直接值: {nested_target} = {nested_source}")
-                    model_params[target_param] = nested_params
-                elif isinstance(source_param, str):
-                    # 特殊处理：参数名称相同的情况
-                    if source_param == target_param and target_param in kwargs:
-                        model_params[target_param] = kwargs[target_param]
-                        print(f"特殊处理相同名称参数: {target_param} = {kwargs[target_param]}")
-                    # 正常映射处理
-                    elif source_param in kwargs:
-                        model_params[target_param] = kwargs[source_param]
-                        print(f"参数映射: {target_param} = {kwargs[source_param]} (来自 {source_param})")
-                    else:
-                        print(f"警告: 参数 {target_param} 的映射源 {source_param} 不在用户参数中")
+        mapped: dict[str, Any] = {}
+        missing: list[str] = []
+        for target_name, source in param_map.items():
+            if target_name in kwargs:
+                mapped[target_name] = kwargs[target_name]
+            elif isinstance(source, str):
+                if source in kwargs:
+                    mapped[target_name] = kwargs[source]
                 else:
-                    # 直接值（非字符串）
-                    model_params[target_param] = source_param
-                    print(f"使用参数映射中的直接值: {target_param} = {source_param}")
+                    missing.append(source)
+            else:
+                mapped[target_name] = source
 
-
-            # 确保关键参数存在（避免None值或缺失）
-            model_params.setdefault('out_channels', 1)
-
-            print(f"模型 {model_path} 的最终参数:")
-            for k, v in model_params.items():
-                print(f"  {k}: {v}")
-
-            return model_params
-
-        # 如果没有特定配置，直接返回原始参数
-        return kwargs
+        if missing:
+            names = ", ".join(sorted(set(missing)))
+            raise ValueError(f"Missing required model arguments: {names}")
+        return mapped
 
     @classmethod
-    def get_available_models(cls):
-        """
-        获取所有可用模型列表
+    def get_available_models(cls) -> list[str]:
+        """Return the supported public model names."""
+        return list(cls.BUILTIN_MODELS)
 
-        返回:
-        - 可用模型列表
-        """
-        available_models = list(cls.BUILTIN_MODELS.keys())
+    @classmethod
+    def load_model(cls, model_path: str, model_class=None, **kwargs: Any):
+        """Load a model and its state dictionary from a training checkpoint."""
+        checkpoint_path = Path(model_path)
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(f"Model checkpoint not found: {checkpoint_path}")
 
-        # 扫描model目录
-        if os.path.exists("model"):
-            for filename in os.listdir("model"):
-                if filename.endswith(".py") and not filename.startswith("__"):
-                    model_name = filename[:-3]
-                    if model_name not in available_models:
-                        available_models.append(model_name)
+        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        state_dict = checkpoint.get("model_state_dict", checkpoint)
 
-        # 扫描model_zoo目录
-        if os.path.exists("model_zoo"):
-            for filename in os.listdir("model_zoo"):
-                if filename.endswith(".py") and not filename.startswith("__"):
-                    model_name = filename[:-3]
-                    available_models.append(f"zoo:{model_name}")
-
-        return available_models
-
-    @staticmethod
-    def load_model(model_path, model_class=None, **kwargs):
-        """
-        从保存的检查点加载模型
-
-        参数:
-        - model_path: 模型检查点路径
-        - model_class: 模型类（若为None，则从检查点获取）
-        - **kwargs: 传递给模型构造函数的参数
-
-        返回:
-        - 加载的模型
-        """
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"找不到模型文件: {model_path}")
-
-        checkpoint = torch.load(model_path, map_location='cpu')
-
-        # 如果提供了模型类，直接使用
         if model_class is not None:
             model = model_class(**kwargs)
-            model.load_state_dict(checkpoint['model_state_dict'])
+            model.load_state_dict(state_dict)
             return model
 
-        # 从检查点获取模型类和参数
-        if 'model_info' in checkpoint:
-            model_info = checkpoint['model_info']
-            model_name = model_info.get('name')
-            model_module = model_info.get('module')
+        model_info = checkpoint.get("model_info", {})
+        qualified_name = cls._qualified_name(model_info)
+        if qualified_name is None:
+            for filename in ("model_info.json", "model_info.txt"):
+                info_path = checkpoint_path.parent / filename
+                if info_path.is_file():
+                    qualified_name = cls._qualified_name(cls._read_model_info(info_path))
+                    if qualified_name:
+                        break
 
-            if model_name and model_module:
-                model_path = f"{model_module}.{model_name}"
-                model = ModelFactory._create_from_path(model_path, **kwargs)
-                model.load_state_dict(checkpoint['model_state_dict'])
-                return model
+        if qualified_name is None:
+            raise ValueError(
+                "The checkpoint does not identify its model class. Pass model_class "
+                "explicitly or provide model_info in the checkpoint directory."
+            )
 
-        # 如果没有模型信息，尝试从文件名推断
-        model_dir = os.path.dirname(model_path)
+        model = cls._create_from_path(qualified_name, **kwargs)
+        model.load_state_dict(state_dict)
+        return model
 
-        # 尝试查找model_info.txt或model_info.json文件
-        info_path = os.path.join(model_dir, 'model_info.json')
-        if os.path.exists(info_path):
-            import json
-            with open(info_path, 'r') as f:
-                model_info = json.load(f)
-                model_name = model_info.get('name')
-                model_module = model_info.get('module')
+    @staticmethod
+    def _qualified_name(model_info: dict[str, Any]) -> str | None:
+        name = model_info.get("name")
+        module = model_info.get("module")
+        return f"{module}.{name}" if name and module else None
 
-                if model_name and model_module:
-                    model_path = f"{model_module}.{model_name}"
-                    model = ModelFactory._create_from_path(model_path, **kwargs)
-                    model.load_state_dict(checkpoint['model_state_dict'])
-                    return model
+    @staticmethod
+    def _read_model_info(info_path: Path) -> dict[str, str]:
+        if info_path.suffix == ".json":
+            with info_path.open("r", encoding="utf-8") as handle:
+                return json.load(handle)
 
-        # 尝试查找model_info.txt文件
-        info_path = os.path.join(model_dir, 'model_info.txt')
-        if os.path.exists(info_path):
-            with open(info_path, 'r') as f:
-                lines = f.readlines()
-                model_name = None
-                model_module = None
-
-                for line in lines:
-                    if line.startswith('name:'):
-                        model_name = line.split(':', 1)[1].strip()
-                    elif line.startswith('module:'):
-                        model_module = line.split(':', 1)[1].strip()
-
-                if model_name and model_module:
-                    model_path = f"{model_module}.{model_name}"
-                    model = ModelFactory._create_from_path(model_path, **kwargs)
-                    model.load_state_dict(checkpoint['model_state_dict'])
-                    return model
-        
-        raise ValueError("无法确定模型类型。请提供model_class参数或确保检查点包含模型信息。")
+        values: dict[str, str] = {}
+        with info_path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                key, separator, value = line.partition(":")
+                if separator:
+                    values[key.strip()] = value.strip()
+        return values
 
 
-def create_model(model_name, **kwargs):
-    """
-    创建模型的便捷函数
-    
-    参数:
-    - model_name: 模型名称
-    - **kwargs: 传递给模型构造函数的参数
-    
-    返回:
-    - model: 模型实例
-    """
+def create_model(model_name: str, **kwargs: Any):
+    """Create a supported model."""
     return ModelFactory.create_model(model_name, **kwargs)
 
 
-def load_model(model_path, model_class=None, **kwargs):
-    """
-    加载模型的便捷函数
-    
-    参数:
-    - model_path: 模型检查点路径
-    - model_class: 模型类（若为None，则从检查点获取）
-    - **kwargs: 传递给模型构造函数的参数
-    
-    返回:
-    - model: 加载的模型
-    """
+def load_model(model_path: str, model_class=None, **kwargs: Any):
+    """Load a supported model checkpoint."""
     return ModelFactory.load_model(model_path, model_class, **kwargs)
 
 
-def get_available_models():
-    """
-    获取所有可用模型的便捷函数
-    
-    返回:
-    - 可用模型列表
-    """
+def get_available_models() -> list[str]:
+    """Return the supported public model names."""
     return ModelFactory.get_available_models()

@@ -1,117 +1,14 @@
-aiohappyeyeballs==2.4.3
-aiohttp==3.10.10
-aiosignal==1.3.1
-anyio==4.9.0
-arrow==1.3.0
-async-timeout==4.0.3
-attrs==24.2.0
-bc==0.0.1
-bio==1.7.1
+# Install a CUDA-compatible PyTorch build and torch-scatter first; see README.md.
 biopython==1.85
-biothings_client==0.4.1
-blessed==1.20.0
-causal-conv1d @ file:///media/ST-18T/cheery/whl/cp310/causal_conv1d-1.4.0%2Bcu118torch2.0cxx11abiFALSE-cp310-cp310-linux_x86_64.whl#sha256=814b3c7b13316011192630f9ee9fc17a3a129c4480c8c5eb8812b96bd242545b
-certifi==2024.12.14
-charset-normalizer==3.4.0
-click==8.1.8
-cmake==3.31.2
-contourpy==1.3.1
-cycler==0.12.1
 einops==0.8.0
-exceptiongroup==1.2.2
-fair-esm==2.0.0
-filelock==3.16.1
-flex==6.14.1
-fonttools==4.55.3
-frozenlist==1.4.1
-fsspec==2024.10.0
-gprofiler-official==1.0.0
-gpustat==1.1.1
-GridDataFormats==1.0.2
-h11==0.14.0
-httpcore==1.0.7
-httpx==0.28.1
-huggingface-hub==0.27.0
-idna==3.10
-Jinja2==3.1.4
-jinja2-time==0.2.0
-joblib==1.4.2
-jsonpointer==3.0.0
-kiwisolver==1.4.7
-lightning-utilities==0.11.9
-lit==18.1.8
-littleutils==0.2.4
-make==0.1.6.post2
-mamba-ssm @ file:///media/ST-18T/cheery/whl/cp310/mamba_ssm-2.2.2%2Bcu118torch2.0cxx11abiFALSE-cp310-cp310-linux_x86_64.whl#sha256=f2cd537a0bc57ef573b6d4a87e547afa661902ebc6fb6dbbb7c6ee9a60396b2b
-MarkupSafe==3.0.2
 matplotlib==3.10.0
-mda-xdrlib==0.2.0
-MDAnalysis==2.9.0
-mmtf-python==1.1.3
-mpmath==1.3.0
-mrcfile==1.5.4
-msgpack==1.1.0
-multidict==6.1.0
-mygene==3.2.2
 networkx==3.4.2
-ninja==1.11.1.3
 numpy==1.26.3
-nvidia-ml-py==12.570.86
-ogb==1.3.6
-OpenMM==8.2.0
-outcome==1.3.0.post0
-outdated==0.2.2
-packaging @ file:///croot/packaging_1734472117206/work
 pandas==1.5.2
-pillow==11.0.0
-platformdirs==4.3.7
-pooch==1.8.2
-propcache==0.2.0
-psutil==6.1.0
-pyparsing==3.2.0
-PySocks==1.7.1
-python-dateutil==2.9.0.post0
-python-dotenv==1.1.0
-pytz==2024.2
 PyYAML==6.0.2
-regex==2024.11.6
-requests==2.32.3
-rfc3987==1.3.8
-safetensors==0.4.5
 scikit-learn==1.6.0
 scipy==1.14.1
 seaborn==0.13.2
-selenium==4.30.0
-six==1.17.0
-sniffio==1.3.1
-sortedcontainers==2.4.0
-strict-rfc3339==0.7
-style==1.1.0
-sympy==1.13.3
-threadpoolctl==3.5.0
-tokenizers==0.21.0
-torch @ file:///media/ST-18T/cheery/whl/cp310/torch-2.0.0%2Bcu117-cp310-cp310-linux_x86_64.whl#sha256=f6e26492d214edab5b407e903ed3c7b190ac5709330bd72060d1be01b354c198
-torch-cluster @ file:///media/ST-18T/cheery/whl/cp310/torch_cluster-1.6.1%2Bpt20cu117-cp310-cp310-linux_x86_64.whl#sha256=8fc464ff980eb6918e41c6751b98dadf0f485895daf7ce3fe36e7eba5fa45c01
 torch-geometric==2.6.1
-torch-scatter @ file:///media/ST-18T/cheery/whl/cp310/torch_scatter-2.1.1%2Bpt20cu117-cp310-cp310-linux_x86_64.whl#sha256=fee771e3d0545c653223315dabec73fadf594785f8fe91b3e4a9762087c6dddf
-torch-sparse @ file:///media/ST-18T/cheery/whl/cp310/torch_sparse-0.6.17%2Bpt20cu117-cp310-cp310-linux_x86_64.whl#sha256=64aa5e4daf9a648f0440366cc03f4facdcead572d97098fe5c504ab3599d6819
-torch-spline-conv @ file:///media/ST-18T/cheery/whl/cp310/torch_spline_conv-1.2.2%2Bpt20cu117-cp310-cp310-linux_x86_64.whl#sha256=b4c2045f2274ff47090c70367b0479e9bcc3e7dc9981437f619f59a6f45fad00
-torchaudio @ file:///media/ST-18T/cheery/whl/cp310/torchaudio-2.0.0%2Bcu117-cp310-cp310-linux_x86_64.whl#sha256=a4dc43dea615e5d3178b2e1f81f4ad256a4689a1fd8c55f1e24511b075632cf6
-torchmetrics==1.6.0
-torchvision @ file:///media/ST-18T/cheery/whl/cp310/torchvision-0.15.0%2Bcu117-cp310-cp310-linux_x86_64.whl#sha256=5fa82567976532f27c1d69ec153ad1b32db00e85bc870b2614fa73ad6981fd4e
 tqdm==4.66.5
-transformers==4.47.1
-trio==0.29.0
-trio-websocket==0.12.2
 triton==2.2.0
-types-python-dateutil==2.9.0.20241206
-typing_extensions==4.12.2
-update==0.0.1
-urllib3==2.2.3
-validate_email==1.3
-wcwidth==0.2.13
-webdriver-manager==4.0.2
-websocket-client==1.8.0
-wget==3.2
-wsproto==1.2.0
-yarl==1.16.0

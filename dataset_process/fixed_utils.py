@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from config import ENCODING_DIM
 
-# 保留原有的 aa_dict 和其他辅助函数
+
 aa_dict = {
     'ALA': [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     'ARG': [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -62,19 +62,17 @@ def load_conservation_scores(directory, filename):
 
 def create_graph_from_structure_bidirectional(structure, pssm_scores=None, conservation_scores=None, threshold=8.0,
                                               encoding_dim=ENCODING_DIM):
-    """
-    修复后的函数，确保创建双向图
-    """
+    'Create graph from structure bidirectional.'
     ca_coords = get_residue_ca_coords(structure)
-    graph = nx.Graph()  # 使用无向图即可确保边是双向的
+    graph = nx.Graph()
 
-    # 添加节点和特征
+
     for i, ((chain_id, residue_id), coord) in enumerate(ca_coords.items()):
         residue = structure[0][chain_id][residue_id]
         resname = residue.get_resname()
         one_hot = np.array(aa_dict.get(resname, [0] * 20))
         pssm = np.array(pssm_scores[i]) if pssm_scores is not None and i < len(pssm_scores) else np.zeros(20)
-        # 归一化PSSM得分
+
         pssm = np.clip(pssm, -10, 10)
         pssm = (pssm + 10) / 20
         conservation = np.array([conservation_scores[i]]) if conservation_scores is not None and i < len(
@@ -82,7 +80,7 @@ def create_graph_from_structure_bidirectional(structure, pssm_scores=None, conse
         features = np.concatenate((one_hot, pssm, conservation))
         graph.add_node((chain_id, residue_id), feature=features, residue=residue)
 
-    # 添加边，无需判断 res_id1 < res_id2，因为 nx.Graph 默认是无向的
+
     for (chain_id1, res_id1), coord1 in ca_coords.items():
         for (chain_id2, res_id2), coord2 in ca_coords.items():
             if (chain_id1, res_id1) != (chain_id2, res_id2):
@@ -95,20 +93,18 @@ def create_graph_from_structure_bidirectional(structure, pssm_scores=None, conse
 
 
 def process_pdb_files_bidirectional(directory, pssm_pickle_file, conservation_directory):
-    """
-    修复后的函数，使用双向图处理 PDB 文件
-    """
+    'Process pdb files bidirectional.'
     parser = PDB.PDBParser(QUIET=True)
     graphs = []
 
     wild_type_files = {}
     mutant_files = {}
 
-    # 加载 PSSM 分数
+
     with open(pssm_pickle_file, 'rb') as file:
         pssm_scores_dict = pickle.load(file)
 
-    # 分类文件为野生型或突变型
+
     for file_name in os.listdir(directory):
         if re.match(r'.+_wild_type\.pdb', file_name):
             wild_type_files[file_name.split('_wild_type')[0]] = file_name
@@ -118,31 +114,31 @@ def process_pdb_files_bidirectional(directory, pssm_pickle_file, conservation_di
                 mutant_files[base_name] = []
             mutant_files[base_name].append(file_name)
 
-    # 获取所有野生型 PDB 文件
+
     wild_pdbs = list(Path(directory).glob('*_wild_type.pdb'))
-    # 预计算总突变体数量
+
     total_mutants = sum(len(list(wild_pdb.parent.glob(f'{wild_pdb.stem.replace("_wild_type", "")}_mutant_*.pdb')))
                         for wild_pdb in wild_pdbs)
 
-    # 创建进度条
+
     with tqdm(total=total_mutants,
               desc="Processing mutations",
               unit="mutation",
               ncols=100,
               colour='green',
               file=sys.stdout) as pbar:
-        # 处理每个突变文件及其对应的野生型文件
+
         for base_name, mutants in mutant_files.items():
             if base_name in wild_type_files:
                 wild_type_file = wild_type_files[base_name]
                 wild_type_structure = parser.get_structure(base_name + '_wild_type',
                                                            os.path.join(directory, wild_type_file))
 
-                # 加载野生型的 PSSM 和保守性得分
+
                 wild_type_pssm = pssm_scores_dict.get(wild_type_file.replace('.pdb', '.pssm'), None)
                 wild_type_conservation = load_conservation_scores(conservation_directory, wild_type_file)
 
-                # 创建双向图
+
                 wild_type_graph = create_graph_from_structure_bidirectional(
                     wild_type_structure,
                     wild_type_pssm,
@@ -152,11 +148,11 @@ def process_pdb_files_bidirectional(directory, pssm_pickle_file, conservation_di
                 for mutant_file in mutants:
                     mutant_structure = parser.get_structure(mutant_file, os.path.join(directory, mutant_file))
 
-                    # 加载突变型的 PSSM 和保守性得分
+
                     mutant_pssm = pssm_scores_dict.get(mutant_file.replace('.pdb', '.pssm'), None)
                     mutant_conservation = load_conservation_scores(conservation_directory, mutant_file)
 
-                    # 创建双向图
+
                     mutant_graph = create_graph_from_structure_bidirectional(
                         mutant_structure,
                         mutant_pssm,

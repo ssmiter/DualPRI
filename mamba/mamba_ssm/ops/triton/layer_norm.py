@@ -129,7 +129,7 @@ def config_prune(configs):
 
     if torch.version.hip:
         try:
-            # set warp size based on gcn architecure 
+            # set warp size based on gcn architecure
             gcn_arch_name = torch.cuda.get_device_properties(0).gcnArchName
             if "gfx10" in gcn_arch_name or "gfx11" in gcn_arch_name:
                 # radeon
@@ -147,8 +147,8 @@ def config_prune(configs):
             warnings.warn(f"{e}, warp size set to {warp_size} based on device name: {device_name}", UserWarning)
 
     else:
-        # cuda 
-        warp_size = 32    
+        # cuda
+        warp_size = 32
 
     max_block_sz = 1024
     max_num_warps = max_block_sz // warp_size

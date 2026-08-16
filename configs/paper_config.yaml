@@ -1,0 +1,34 @@
+release: iscale-v1.0.0
+status: release-candidate
+
+model:
+  name: iscale
+  hidden_channels: 64
+  num_layers: 3
+  d_state: 32
+  d_conv: 4
+  expand: 2
+  headdim: 16
+  chunk_size: 32
+  dropout: 0.1
+
+features:
+  protein_channels: 41
+  rna_channels: 5
+  feature_type: 1
+  distance_thresholds_angstrom: [8.0, 10.0, 15.0, 20.0, 30.0, 50.0]
+
+training:
+  batch_size: 16
+  learning_rate: 0.0008
+  weight_decay: 0.00001
+  max_epochs: 300
+  early_stopping_patience: 40
+  auxiliary_loss_weight: 0.2
+  seed: 42
+
+release_artifacts:
+  checkpoint: null
+  checkpoint_sha256: null
+  dataset_doi: null
+  software_doi: null

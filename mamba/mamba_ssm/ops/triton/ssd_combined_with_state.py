@@ -553,7 +553,7 @@ def _mamba_chunk_scan_combined_bwd(dout, x, dt, A, B, C, out, chunk_size, D=None
 class MambaChunkScanCombinedFn(torch.autograd.Function):
 
     @staticmethod
-    def forward(ctx, x, dt, A, B, C, chunk_size, D=None, z=None, dt_bias=None, initial_states=None, seq_idx=None, cu_seqlens=None, dt_softplus=False, dt_limit=(0.0, float("inf")), return_final_states=False, return_varlen_states=False, return_states=False):  # 添加return_states参数
+    def forward(ctx, x, dt, A, B, C, chunk_size, D=None, z=None, dt_bias=None, initial_states=None, seq_idx=None, cu_seqlens=None, dt_softplus=False, dt_limit=(0.0, float("inf")), return_final_states=False, return_varlen_states=False, return_states=False):
         ctx.dt_dtype = dt.dtype
         if not return_varlen_states:
             cu_seqlens = None
@@ -576,9 +576,9 @@ class MambaChunkScanCombinedFn(torch.autograd.Function):
         ctx.dt_limit = dt_limit
         ctx.return_final_states = return_final_states
         ctx.return_varlen_states = return_varlen_states
-        ctx.return_states = return_states  # 保存状态
+        ctx.return_states = return_states
 
-        # 在返回结果部分添加states
+
         result = out
         if return_final_states:
             result = (out, final_states)
@@ -610,8 +610,8 @@ class MambaChunkScanCombinedFn(torch.autograd.Function):
                                                                                                 seq_idx=seq_idx,
                                                                                                 dt_softplus=ctx.dt_softplus,
                                                                                                 dt_limit=ctx.dt_limit)
-        # 注意：新增的参数return_states的梯度是Non
-        return dx, ddt, dA, dB, dC, None, dD, dz, ddt_bias, dinitial_states, None, None, None, None, None, None, None  # 17个参数的梯度
+
+        return dx, ddt, dA, dB, dC, None, dD, dz, ddt_bias, dinitial_states, None, None, None, None, None, None, None
 
 
 
