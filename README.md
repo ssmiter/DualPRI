@@ -81,6 +81,8 @@ python main.py --data_path /path/to/protein_rna_dataset.pkl
 
 See [docs/DATA.md](docs/DATA.md) for the expected data format and preparation notes.
 
+The processed training dataset and source data are available on [Zenodo](https://doi.org/10.5281/zenodo.21972360).
+
 ## Model configuration
 
 The study uses the following central configuration:
