@@ -142,10 +142,6 @@ python cross_val.py \
 
 See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for additional evaluation notes.
 
-## Outputs
-
-Training outputs are written to timestamped directories under `output/` unless another location is supplied. These directories can contain checkpoints, logs, predictions, and cached intermediate values and are intentionally excluded from version control.
-
 ## License and third-party code
 
 The project is released under the Apache License 2.0. Portions of the state space implementation are derived from the Apache-2.0-licensed [state-spaces/mamba](https://github.com/state-spaces/mamba) project and have been modified to return intermediate states. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
