@@ -4,32 +4,24 @@
 
 iSCALE is a research implementation for predicting mutation-induced changes in protein–RNA binding affinity. It combines protein sequence descriptors, implicit multiscale information about the binding partner, and a bidirectional state space model. A structure-aware auxiliary task is used during training to shape the learned representation.
 
-This repository is being prepared as the code release accompanying the manuscript:
-
-> *Predicting Protein–RNA Binding Affinity Changes via Spatial Coupling-Aware State Space Modeling*
-
-The repository was originally named DualPRI and early internal code used the name DualSSD. The public model name is **iSCALE**. The Python alias `DualSSD` and the command-line value `dualssd` are retained only for backward compatibility.
-
 ![iSCALE framework](Framework.png)
 
-## Release scope
+## Overview
 
-This code release contains:
+The repository contains:
 
 - the iSCALE model and training code;
 - the modified state space operations required to expose chunk-level states;
 - protein–RNA dataset preprocessing utilities;
 - training and cross-validation entry points;
-- the configuration used for the manuscript release.
-
-Large datasets, checkpoints, molecular-dynamics trajectories, and figure source data are distributed separately through a research-data repository. See [docs/DATA.md](docs/DATA.md).
+- the model configuration used in the study.
 
 ## Repository layout
 
 ```text
 .
-├── config.py                     # Shared paths and manuscript model configuration
-├── configs/paper_config.yaml     # Human-readable manuscript configuration
+├── config.py                     # Shared paths and model configuration
+├── configs/paper_config.yaml     # Human-readable model configuration
 ├── main.py                       # Training and evaluation entry point
 ├── cross_val.py                  # Cross-validation entry point
 ├── trainer.py                    # Training utilities
@@ -37,15 +29,15 @@ Large datasets, checkpoints, molecular-dynamics trajectories, and figure source 
 ├── mamba/                        # Modified state space implementation
 ├── dataset_process/              # Dataset preprocessing utilities
 ├── dataset/                      # Small benchmark metadata tables
-├── docs/DATA.md                  # Data access and provenance
+├── docs/DATA.md                  # Data format and preparation notes
 ├── docs/ENVIRONMENT.md           # Runtime, compiler, and optional dependencies
-├── docs/REPRODUCIBILITY.md       # Manuscript reproduction guide
+├── docs/REPRODUCIBILITY.md       # Reproducibility notes
 └── scripts/check_release.py      # Dependency-free release sanity check
 ```
 
 ## Environment
 
-The reference environment uses Linux, Python 3.10, and PyTorch 2.0.0 with its CUDA 11.7 runtime. The build host also provided CUDA 11.8 NVCC for custom extensions. This mixed runtime/compiler setup reflects the manuscript environment and is documented explicitly in [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
+The reference environment uses Linux, Python 3.10, PyTorch 2.0.0 with CUDA 11.7, and CUDA 11.8 NVCC for custom extensions. See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for the complete environment specification.
 
 ### Conda installation
 
@@ -54,7 +46,7 @@ conda env create -f environment.yml
 conda activate iscale
 ```
 
-The Conda specification installs the core iSCALE path. It intentionally records both `pytorch-cuda=11.7` and `cuda-nvcc=11.8.89`; they describe the PyTorch runtime and extension compiler respectively.
+The Conda specification records `pytorch-cuda=11.7` for the PyTorch runtime and `cuda-nvcc=11.8.89` for compiling custom extensions.
 
 ### Manual installation
 
@@ -69,9 +61,7 @@ pip install -r requirements.txt
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
 
-The custom state space kernels require Triton and are intended for Linux GPU environments. The core iSCALE path uses the vendored kernels and does not require a separate `mamba-ssm` installation. To recreate historical Mamba fast paths, install `causal-conv1d==1.4.0` and `mamba-ssm==2.2.2` after PyTorch with `--no-build-isolation`; see [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
-
-Optional sequence-feature generation, structural analysis, and molecular-dynamics workflows require additional packages described in the same environment note. They are not needed when training from the released processed dataset.
+The custom state space kernels require Triton and are intended for Linux GPU environments. The included kernels are used directly by iSCALE; see [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for optional dependencies.
 
 ## Data preparation
 
@@ -89,11 +79,11 @@ You can instead provide an explicit path:
 python main.py --data_path /path/to/protein_rna_dataset.pkl
 ```
 
-The public dataset DOI and checksums will be added to [docs/DATA.md](docs/DATA.md) before the versioned release. Raw third-party structural and benchmark data are not duplicated in the code repository.
+See [docs/DATA.md](docs/DATA.md) for the expected data format and preparation notes.
 
-## Manuscript configuration
+## Model configuration
 
-The release candidate uses the following central configuration:
+The study uses the following central configuration:
 
 | Parameter | Value |
 |---|---:|
@@ -106,7 +96,7 @@ The release candidate uses the following central configuration:
 | Auxiliary loss weight | 0.2 |
 | Dropout | 0.1 |
 
-The machine-readable values are defined in `config.PAPER_MODEL_CONFIG` and documented in [configs/paper_config.yaml](configs/paper_config.yaml). These values must remain synchronized with the released checkpoint.
+The machine-readable values are defined in `config.PAPER_MODEL_CONFIG` and documented in [configs/paper_config.yaml](configs/paper_config.yaml).
 
 ## Quick checks
 
@@ -116,7 +106,7 @@ Run the dependency-free repository check:
 python scripts/check_release.py
 ```
 
-After downloading the processed dataset, start a training run with the manuscript model name:
+After preparing the processed dataset, start a training run with:
 
 ```bash
 python main.py \
@@ -150,22 +140,16 @@ python cross_val.py \
   --seed 42
 ```
 
-See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for the relationship between datasets, configurations, checkpoints, and manuscript figures.
+See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for additional evaluation notes.
 
 ## Outputs
 
 Training outputs are written to timestamped directories under `output/` unless another location is supplied. These directories can contain checkpoints, logs, predictions, and cached intermediate values and are intentionally excluded from version control.
 
-## Citation
-
-Citation metadata are provided in [CITATION.cff](CITATION.cff). The manuscript DOI and the archived software DOI will be added when available.
-
 ## License and third-party code
 
 The project is released under the Apache License 2.0. Portions of the state space implementation are derived from the Apache-2.0-licensed [state-spaces/mamba](https://github.com/state-spaces/mamba) project and have been modified to return intermediate states. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Datasets and external software retain their original terms of use and citation requirements.
-
 ## Contact
 
-For questions about the code or data release, contact Rui Chen at `chenrui3074@stu.ouc.edu.cn`.
+For questions, contact Rui Chen at `chenrui3074@stu.ouc.edu.cn`.
