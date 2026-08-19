@@ -1,34 +1,20 @@
-# Data access and provenance
+# Data access
 
-## Release boundary
+## Public data record
 
-The GitHub repository contains code, configuration, documentation, and small
-benchmark metadata tables. Large processed datasets, checkpoints, molecular-
-dynamics trajectories, and figure source data are released separately so that
-the software repository remains lightweight and versionable.
+The processed protein-RNA dataset and the source data supporting the manuscript
+are archived on Zenodo:
 
-The public data record will be linked here before the `v1.0.0` release:
+- DOI: [10.5281/zenodo.21972360](https://doi.org/10.5281/zenodo.21972360)
+- `protein_rna_dataset.pkl`: the processed dataset used by the training and
+  evaluation entry points;
+- `iSCALE_source_data.zip`: source values and retained fold-level results for
+  Figures 2-6 and Supplementary Tables 1-3.
 
-- Dataset DOI: **to be assigned**
-- Dataset landing page: **to be assigned**
-- Software DOI: **to be assigned through the Zenodo–GitHub integration**
+The source-data archive supports the reported figures and tables. It is not an
+archive of every intermediate file produced during model development.
 
-## Recommended data-record files
-
-The manuscript data record should contain:
-
-1. `iSCALE_source_data_v1.0.zip` — source values for Figures 2–6,
-   Supplementary Tables 1–3, provenance scripts, and a public README;
-2. `iSCALE_pipeline_archive_v1.0.zip` or equivalent TAR.GZ archives — the
-   reusable preprocessing layer, where third-party redistribution terms permit;
-3. the final checkpoint and a minimal model-ready example;
-4. `SHA256SUMS.txt` — checksums for every deposited archive.
-
-Full molecular-dynamics trajectories and simulation inputs may be deposited as
-a separate related record because they are substantially larger than the figure
-source package.
-
-## Expected processed dataset
+## Processed dataset
 
 Training uses a pickle file containing a list of mutation samples. Each sample
 must provide compatible wild-type and mutant protein graphs, binding-partner
@@ -44,25 +30,11 @@ An alternative path can be passed with `--data_path` or set with the
 
 ## Preprocessing inputs
 
-The preprocessing utilities under `dataset_process/` operate on mutation
-metadata, experimentally resolved complex structures, sequence profiles, and
+The utilities under `dataset_process/` operate on mutation metadata,
+experimentally resolved complex structures, sequence profiles, and
 residue-level conservation values. Users are responsible for obtaining
 third-party resources under their original terms and for citing the underlying
 databases and benchmark publications.
 
-The code release does not include machine-specific caches, private server
-paths, or unrelated exploratory experiment outputs.
-
-## Source-data relationship
-
-The figure source package and this software release are distinct research
-objects and should receive separate persistent identifiers. The data record
-should link to the software DOI, and the software README should link to the
-version-specific data DOI.
-
-## Reviewer access
-
-If a large file cannot be made public at initial submission, it should remain
-available to editors and reviewers through a stable private or restricted
-repository link. The final Data Availability statement must describe the access
-route that actually exists at the time of submission.
+The repository does not include machine-specific caches, private server paths,
+or unrelated exploratory outputs.

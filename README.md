@@ -29,15 +29,13 @@ The repository contains:
 ├── mamba/                        # Modified state space implementation
 ├── dataset_process/              # Dataset preprocessing utilities
 ├── dataset/                      # Small benchmark metadata tables
-├── docs/DATA.md                  # Data format and preparation notes
-├── docs/ENVIRONMENT.md           # Runtime, compiler, and optional dependencies
-├── docs/REPRODUCIBILITY.md       # Reproducibility notes
+├── docs/                         # Additional data and reproducibility notes
 └── scripts/check_release.py      # Dependency-free release sanity check
 ```
 
 ## Environment
 
-The reference environment uses Linux, Python 3.10, PyTorch 2.0.0 with CUDA 11.7, and CUDA 11.8 NVCC for custom extensions. See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for the complete environment specification.
+The reference environment uses Linux, Python 3.10, PyTorch 2.0.0 with CUDA 11.7, and CUDA 11.8 NVCC for custom extensions.
 
 ### Conda installation
 
@@ -61,7 +59,7 @@ pip install -r requirements.txt
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
 
-The custom state space kernels require Triton and are intended for Linux GPU environments. The included kernels are used directly by iSCALE; see [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for optional dependencies.
+The custom state space kernels require Triton and are intended for Linux GPU environments. The included kernels are used directly by iSCALE.
 
 ## Data preparation
 
@@ -78,8 +76,6 @@ You can instead provide an explicit path:
 ```bash
 python main.py --data_path /path/to/protein_rna_dataset.pkl
 ```
-
-See [docs/DATA.md](docs/DATA.md) for the expected data format and preparation notes.
 
 The processed training dataset and source data are available on [Zenodo](https://doi.org/10.5281/zenodo.21972360).
 
@@ -141,8 +137,6 @@ python cross_val.py \
   --chunk_size 32 \
   --seed 42
 ```
-
-See [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) for additional evaluation notes.
 
 ## License and third-party code
 

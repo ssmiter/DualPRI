@@ -28,7 +28,5 @@ training:
   seed: 42
 
 release_artifacts:
-  checkpoint: null
-  checkpoint_sha256: null
-  dataset_doi: null
-  software_doi: null
+  dataset_doi: 10.5281/zenodo.21972360
+  dataset_url: https://doi.org/10.5281/zenodo.21972360
